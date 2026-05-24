@@ -1,0 +1,123 @@
+#![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
+
+mod db;
+mod commands;
+mod reminder;
+
+use std::sync::Arc;
+use db::Database;
+use tauri::{
+    Manager,
+    tray::{TrayIconBuilder, MouseButton, MouseButtonState, TrayIconEvent},
+    menu::{Menu, MenuItem},
+};
+
+fn restore_window_state(window: &tauri::WebviewWindow, db: &Database) {
+    let conn = match db.conn.lock() {
+        Ok(c) => c,
+        Err(_) => return,
+    };
+    let mut stmt = match conn.prepare("SELECT key, value FROM app_settings WHERE key LIKE 'window_%'") {
+        Ok(s) => s,
+        Err(_) => return,
+    };
+    let rows: std::collections::HashMap<String, String> = stmt
+        .query_map([], |row| Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?)))
+        .ok()
+        .map(|iter| iter.filter_map(|r| r.ok()).collect())
+        .unwrap_or_default();
+
+    let x = rows.get("window_x").and_then(|v| v.parse::<i32>().ok());
+    let y = rows.get("window_y").and_then(|v| v.parse::<i32>().ok());
+    let w = rows.get("window_width").and_then(|v| v.parse::<u32>().ok());
+    let h = rows.get("window_height").and_then(|v| v.parse::<u32>().ok());
+
+    if let (Some(x), Some(y)) = (x, y) {
+        use tauri::PhysicalPosition;
+        let _ = window.set_position(PhysicalPosition::new(x, y));
+    }
+    if let (Some(w), Some(h)) = (w, h) {
+        use tauri::PhysicalSize;
+        let _ = window.set_size(PhysicalSize::new(w, h));
+    }
+}
+
+fn main() {
+    tauri::Builder::default()
+        .plugin(tauri_plugin_notification::init())
+        .setup(|app| {
+            let app_dir = app.path().app_data_dir().expect("failed to get app data dir");
+            let database = Database::new(app_dir).expect("failed to init database");
+            let db_arc = Arc::new(database);
+
+            app.manage(db_arc.clone());
+
+            // Restore window position/size
+            if let Some(window) = app.get_webview_window("main") {
+                restore_window_state(&window, &db_arc);
+            }
+
+            // System tray
+            let quit = MenuItem::with_id(app, "quit", "Exit", true, None::<&str>)?;
+            let show = MenuItem::with_id(app, "show", "Show", true, None::<&str>)?;
+            let menu = Menu::with_items(app, &[&show, &quit])?;
+            let mut tray_builder = TrayIconBuilder::new()
+                .menu(&menu)
+                .tooltip("TaskTracker");
+
+            if let Some(icon) = app.default_window_icon().cloned() {
+                tray_builder = tray_builder.icon(icon);
+            }
+
+            let _tray = tray_builder
+                .on_menu_event(|app, event| {
+                    match event.id.as_ref() {
+                        "quit" => std::process::exit(0),
+                        "show" => {
+                            if let Some(window) = app.get_webview_window("main") {
+                                let _ = window.show();
+                                let _ = window.set_focus();
+                            }
+                        }
+                        _ => {}
+                    }
+                })
+                .on_tray_icon_event(|tray, event| {
+                    if let TrayIconEvent::Click { button: MouseButton::Left, button_state: MouseButtonState::Up, .. } = event {
+                        let app = tray.app_handle();
+                        if let Some(window) = app.get_webview_window("main") {
+                            let _ = window.show();
+                            let _ = window.set_focus();
+                        }
+                    }
+                })
+                .build(app)?;
+
+            // Start reminder background loop
+            let app_handle = app.handle().clone();
+            reminder::start_reminder_loop(app_handle, db_arc);
+
+            Ok(())
+        })
+        .invoke_handler(tauri::generate_handler![
+            commands::task::create_task,
+            commands::task::update_task,
+            commands::task::delete_task,
+            commands::task::get_task,
+            commands::task::list_tasks,
+            commands::task::add_subtask,
+            commands::task::toggle_subtask,
+            commands::task::delete_subtask,
+            commands::reminder::create_reminder,
+            commands::reminder::delete_reminder,
+            commands::reminder::toggle_reminder,
+            commands::reminder::list_reminders,
+            commands::settings::set_setting,
+            commands::settings::get_all_settings,
+            commands::settings::set_always_on_top,
+            commands::settings::set_window_opacity,
+            commands::settings::minimize_to_tray,
+        ])
+        .run(tauri::generate_context!())
+        .expect("error while running tauri application");
+}
