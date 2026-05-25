@@ -5,6 +5,7 @@
       <input
         v-model="newTaskTitle"
         placeholder="+ 新任务..."
+        maxlength="200"
         @keydown.enter="addTask"
       />
       <div class="priority-toggle-wrapper">
@@ -59,7 +60,25 @@
           >
             <span v-if="task.status === 'done'" class="material-symbols-outlined">check</span>
           </div>
-          <span :class="['task-title', { done: task.status === 'done' }]">{{ task.title }}</span>
+          <input
+            v-if="editingTaskId === task.id"
+            v-model="editingTitle"
+            class="task-edit-input"
+            maxlength="200"
+            @click.stop
+            @blur="saveEdit(task.id)"
+            @keydown.enter="saveEdit(task.id)"
+            @keydown.escape="cancelEdit"
+            ref="editInput"
+          />
+          <span v-else :class="['task-title', { done: task.status === 'done' }]">{{ task.title }}</span>
+          <button
+            v-if="editingTaskId !== task.id"
+            class="edit-btn"
+            @click.stop="startEdit(task)"
+          >
+            <span class="material-symbols-outlined">edit</span>
+          </button>
           <div class="priority-flag-wrapper">
             <button
               class="priority-icon-btn"
@@ -108,7 +127,24 @@
             >
               <span v-if="task.status === 'done'" class="material-symbols-outlined">check</span>
             </div>
-            <span class="task-title medium">{{ task.title }}</span>
+            <input
+              v-if="editingTaskId === task.id"
+              v-model="editingTitle"
+              class="task-edit-input"
+              maxlength="200"
+              @click.stop
+              @blur="saveEdit(task.id)"
+              @keydown.enter="saveEdit(task.id)"
+              @keydown.escape="cancelEdit"
+            />
+            <span v-else class="task-title medium">{{ task.title }}</span>
+            <button
+              v-if="editingTaskId !== task.id"
+              class="edit-btn"
+              @click.stop="startEdit(task)"
+            >
+              <span class="material-symbols-outlined">edit</span>
+            </button>
             <div class="priority-flag-wrapper">
               <button
                 class="priority-icon-btn"
@@ -196,7 +232,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from "vue";
+import { ref, nextTick, onMounted, onUnmounted } from "vue";
 import { useTaskStore } from "../stores/task";
 import type { Task, Priority } from "../repositories/types";
 
@@ -205,6 +241,8 @@ const newTaskTitle = ref("");
 const newTaskPriority = ref<Priority>("low");
 const newSubtaskTitle = ref("");
 const activePriorityMenu = ref<string | null>(null);
+const editingTaskId = ref<string | null>(null);
+const editingTitle = ref("");
 
 onMounted(() => {
   taskStore.fetchTasks();
@@ -236,6 +274,34 @@ function priorityColorClass(p: string): string {
   if (p === "high") return "priority-high-color";
   if (p === "low") return "priority-low-color";
   return "priority-medium-color";
+}
+
+function startEdit(task: Task) {
+  editingTaskId.value = task.id;
+  editingTitle.value = task.title;
+  nextTick(() => {
+    const input = document.querySelector('.task-edit-input') as HTMLInputElement;
+    input?.focus();
+  });
+}
+
+function cancelEdit() {
+  editingTaskId.value = null;
+  editingTitle.value = "";
+}
+
+async function saveEdit(taskId: string) {
+  const title = editingTitle.value.trim();
+  if (!title) {
+    cancelEdit();
+    return;
+  }
+  const task = taskStore.tasks.find((t) => t.id === taskId);
+  if (task && title !== task.title) {
+    await taskStore.updateTask(taskId, { title });
+  }
+  editingTaskId.value = null;
+  editingTitle.value = "";
 }
 
 function completedSubtasks(task: Task): number {
