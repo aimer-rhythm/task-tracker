@@ -8,19 +8,17 @@
         @keydown.enter="addTask"
       />
       <div class="priority-toggle-wrapper">
-        <button class="priority-toggle" @click.stop="togglePriorityMenu">
+        <button class="priority-icon-btn" @click.stop="togglePriorityMenu('new')">
           <span
             class="material-symbols-outlined"
             :class="priorityColorClass(newTaskPriority)"
             style="font-variation-settings: 'FILL' 1"
           >flag</span>
-          <span :class="priorityColorClass(newTaskPriority)">{{ priorityLabel(newTaskPriority) }}</span>
-          <span class="material-symbols-outlined expand-icon">expand_more</span>
         </button>
-        <div v-if="showPriorityMenu" class="priority-menu">
+        <div v-if="activePriorityMenu === 'new'" class="priority-menu">
           <button
             :class="['priority-menu-item', { selected: newTaskPriority === 'high' }]"
-            @click="selectPriority('high')"
+            @click="selectPriority('new', 'high')"
           >
             <span class="material-symbols-outlined priority-high-color" style="font-variation-settings: 'FILL' 1">flag</span>
             <span>High</span>
@@ -28,7 +26,7 @@
           </button>
           <button
             :class="['priority-menu-item', { selected: newTaskPriority === 'medium' }]"
-            @click="selectPriority('medium')"
+            @click="selectPriority('new', 'medium')"
           >
             <span class="material-symbols-outlined priority-medium-color" style="font-variation-settings: 'FILL' 1">flag</span>
             <span>Medium</span>
@@ -36,7 +34,7 @@
           </button>
           <button
             :class="['priority-menu-item', { selected: newTaskPriority === 'low' }]"
-            @click="selectPriority('low')"
+            @click="selectPriority('new', 'low')"
           >
             <span class="material-symbols-outlined priority-low-color" style="font-variation-settings: 'FILL' 1">flag</span>
             <span>Low</span>
@@ -62,10 +60,43 @@
             <span v-if="task.status === 'done'" class="material-symbols-outlined">check</span>
           </div>
           <span :class="['task-title', { done: task.status === 'done' }]">{{ task.title }}</span>
-          <span
-            :class="['material-symbols-outlined', 'priority-flag', priorityColorClass(task.priority), { completed: task.status === 'done' }]"
-            style="font-variation-settings: 'FILL' 1"
-          >flag</span>
+          <div class="priority-flag-wrapper">
+            <button
+              class="priority-icon-btn"
+              @click.stop="togglePriorityMenu(task.id)"
+            >
+              <span
+                :class="['material-symbols-outlined', 'priority-flag', priorityColorClass(task.priority), { completed: task.status === 'done' }]"
+                style="font-variation-settings: 'FILL' 1"
+              >flag</span>
+            </button>
+            <div v-if="activePriorityMenu === task.id" class="priority-menu">
+              <button
+                :class="['priority-menu-item', { selected: task.priority === 'high' }]"
+                @click.stop="selectPriority(task.id, 'high')"
+              >
+                <span class="material-symbols-outlined priority-high-color" style="font-variation-settings: 'FILL' 1">flag</span>
+                <span>High</span>
+                <span v-if="task.priority === 'high'" class="material-symbols-outlined check-icon">check</span>
+              </button>
+              <button
+                :class="['priority-menu-item', { selected: task.priority === 'medium' }]"
+                @click.stop="selectPriority(task.id, 'medium')"
+              >
+                <span class="material-symbols-outlined priority-medium-color" style="font-variation-settings: 'FILL' 1">flag</span>
+                <span>Medium</span>
+                <span v-if="task.priority === 'medium'" class="material-symbols-outlined check-icon">check</span>
+              </button>
+              <button
+                :class="['priority-menu-item', { selected: task.priority === 'low' }]"
+                @click.stop="selectPriority(task.id, 'low')"
+              >
+                <span class="material-symbols-outlined priority-low-color" style="font-variation-settings: 'FILL' 1">flag</span>
+                <span>Low</span>
+                <span v-if="task.priority === 'low'" class="material-symbols-outlined check-icon">check</span>
+              </button>
+            </div>
+          </div>
         </div>
 
         <!-- Expanded task card -->
@@ -78,10 +109,43 @@
               <span v-if="task.status === 'done'" class="material-symbols-outlined">check</span>
             </div>
             <span class="task-title medium">{{ task.title }}</span>
-            <span
-              :class="['material-symbols-outlined', 'priority-flag', priorityColorClass(task.priority)]"
-              style="font-variation-settings: 'FILL' 1"
-            >flag</span>
+            <div class="priority-flag-wrapper">
+              <button
+                class="priority-icon-btn"
+                @click.stop="togglePriorityMenu(task.id)"
+              >
+                <span
+                  :class="['material-symbols-outlined', 'priority-flag', priorityColorClass(task.priority)]"
+                  style="font-variation-settings: 'FILL' 1"
+                >flag</span>
+              </button>
+              <div v-if="activePriorityMenu === task.id" class="priority-menu">
+                <button
+                  :class="['priority-menu-item', { selected: task.priority === 'high' }]"
+                  @click.stop="selectPriority(task.id, 'high')"
+                >
+                  <span class="material-symbols-outlined priority-high-color" style="font-variation-settings: 'FILL' 1">flag</span>
+                  <span>High</span>
+                  <span v-if="task.priority === 'high'" class="material-symbols-outlined check-icon">check</span>
+                </button>
+                <button
+                  :class="['priority-menu-item', { selected: task.priority === 'medium' }]"
+                  @click.stop="selectPriority(task.id, 'medium')"
+                >
+                  <span class="material-symbols-outlined priority-medium-color" style="font-variation-settings: 'FILL' 1">flag</span>
+                  <span>Medium</span>
+                  <span v-if="task.priority === 'medium'" class="material-symbols-outlined check-icon">check</span>
+                </button>
+                <button
+                  :class="['priority-menu-item', { selected: task.priority === 'low' }]"
+                  @click.stop="selectPriority(task.id, 'low')"
+                >
+                  <span class="material-symbols-outlined priority-low-color" style="font-variation-settings: 'FILL' 1">flag</span>
+                  <span>Low</span>
+                  <span v-if="task.priority === 'low'" class="material-symbols-outlined check-icon">check</span>
+                </button>
+              </div>
+            </div>
           </div>
 
           <!-- Progress Section -->
@@ -140,7 +204,7 @@ const taskStore = useTaskStore();
 const newTaskTitle = ref("");
 const newTaskPriority = ref<Priority>("low");
 const newSubtaskTitle = ref("");
-const showPriorityMenu = ref(false);
+const activePriorityMenu = ref<string | null>(null);
 
 onMounted(() => {
   taskStore.fetchTasks();
@@ -152,22 +216,20 @@ onUnmounted(() => {
 });
 
 function closePriorityMenu() {
-  showPriorityMenu.value = false;
+  activePriorityMenu.value = null;
 }
 
-function togglePriorityMenu() {
-  showPriorityMenu.value = !showPriorityMenu.value;
+function togglePriorityMenu(id: string) {
+  activePriorityMenu.value = activePriorityMenu.value === id ? null : id;
 }
 
-function selectPriority(p: Priority) {
-  newTaskPriority.value = p;
-  showPriorityMenu.value = false;
-}
-
-function priorityLabel(p: string): string {
-  if (p === "high") return "High";
-  if (p === "low") return "Low";
-  return "Medium";
+async function selectPriority(id: string, p: Priority) {
+  if (id === 'new') {
+    newTaskPriority.value = p;
+  } else {
+    await taskStore.updateTask(id, { priority: p });
+  }
+  activePriorityMenu.value = null;
 }
 
 function priorityColorClass(p: string): string {
