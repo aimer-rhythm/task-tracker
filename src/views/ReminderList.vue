@@ -4,27 +4,27 @@
     <div class="quick-entry">
       <input
         v-model="newTitle"
-        placeholder="+ New reminder..."
+        placeholder="+ 新提醒..."
         @keydown.enter="showForm = true"
       />
     </div>
     <div v-if="showForm" class="reminder-form">
       <div class="form-row">
         <select v-model="newType" class="form-select">
-          <option value="recurring">Recurring</option>
-          <option value="once">Once</option>
+          <option value="recurring">循环</option>
+          <option value="once">单次</option>
         </select>
         <input
           v-if="newType === 'recurring'"
           v-model.number="newInterval"
           type="number"
           min="1"
-          placeholder="min"
+          placeholder="分钟"
           class="form-number"
         />
-        <span v-if="newType === 'recurring'" class="form-unit">min</span>
-        <button class="form-btn-primary" @click="addReminder">Add</button>
-        <button class="form-btn-secondary" @click="showForm = false">Cancel</button>
+        <span v-if="newType === 'recurring'" class="form-unit">分钟</span>
+        <button class="form-btn-primary" @click="addReminder">添加</button>
+        <button class="form-btn-secondary" @click="showForm = false">取消</button>
       </div>
     </div>
 
@@ -34,7 +34,7 @@
         <div class="reminder-info">
           <div class="reminder-title">{{ reminder.title }}</div>
           <div class="reminder-interval">
-            {{ reminder.type === 'recurring' ? `Every ${formatInterval(reminder.intervalSeconds)}` : 'Once' }}
+            {{ reminder.type === 'recurring' ? `每 ${formatInterval(reminder.intervalSeconds)}` : '单次' }}
           </div>
         </div>
         <div
@@ -49,7 +49,7 @@
 
     <div v-if="!reminderStore.reminders.length" class="empty-state">
       <span class="material-symbols-outlined" style="font-size:32px;color:var(--on-surface-variant);opacity:0.5;">notifications_off</span>
-      <span>No reminders yet</span>
+      <span>暂无提醒</span>
     </div>
   </div>
 </template>
@@ -70,9 +70,9 @@ onMounted(() => {
 
 function formatInterval(seconds: number | null): string {
   if (!seconds) return "";
-  if (seconds < 60) return `${seconds}s`;
-  if (seconds < 3600) return `${Math.round(seconds / 60)} min`;
-  return `${Math.round(seconds / 3600)} hr`;
+  if (seconds < 60) return `${seconds}秒`;
+  if (seconds < 3600) return `${Math.round(seconds / 60)}分钟`;
+  return `${Math.round(seconds / 3600)}小时`;
 }
 
 async function addReminder() {

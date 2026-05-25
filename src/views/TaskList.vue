@@ -4,7 +4,7 @@
     <div class="quick-entry">
       <input
         v-model="newTaskTitle"
-        placeholder="+ New task..."
+        placeholder="+ 新任务..."
         @keydown.enter="addTask"
       />
       <div class="priority-toggle-wrapper">
@@ -21,7 +21,7 @@
             @click="selectPriority('new', 'high')"
           >
             <span class="material-symbols-outlined priority-high-color" style="font-variation-settings: 'FILL' 1">flag</span>
-            <span>High</span>
+            <span>高</span>
             <span v-if="newTaskPriority === 'high'" class="material-symbols-outlined check-icon">check</span>
           </button>
           <button
@@ -29,7 +29,7 @@
             @click="selectPriority('new', 'medium')"
           >
             <span class="material-symbols-outlined priority-medium-color" style="font-variation-settings: 'FILL' 1">flag</span>
-            <span>Medium</span>
+            <span>中</span>
             <span v-if="newTaskPriority === 'medium'" class="material-symbols-outlined check-icon">check</span>
           </button>
           <button
@@ -37,7 +37,7 @@
             @click="selectPriority('new', 'low')"
           >
             <span class="material-symbols-outlined priority-low-color" style="font-variation-settings: 'FILL' 1">flag</span>
-            <span>Low</span>
+            <span>低</span>
             <span v-if="newTaskPriority === 'low'" class="material-symbols-outlined check-icon">check</span>
           </button>
         </div>
@@ -76,7 +76,7 @@
                 @click.stop="selectPriority(task.id, 'high')"
               >
                 <span class="material-symbols-outlined priority-high-color" style="font-variation-settings: 'FILL' 1">flag</span>
-                <span>High</span>
+                <span>高</span>
                 <span v-if="task.priority === 'high'" class="material-symbols-outlined check-icon">check</span>
               </button>
               <button
@@ -84,7 +84,7 @@
                 @click.stop="selectPriority(task.id, 'medium')"
               >
                 <span class="material-symbols-outlined priority-medium-color" style="font-variation-settings: 'FILL' 1">flag</span>
-                <span>Medium</span>
+                <span>中</span>
                 <span v-if="task.priority === 'medium'" class="material-symbols-outlined check-icon">check</span>
               </button>
               <button
@@ -92,7 +92,7 @@
                 @click.stop="selectPriority(task.id, 'low')"
               >
                 <span class="material-symbols-outlined priority-low-color" style="font-variation-settings: 'FILL' 1">flag</span>
-                <span>Low</span>
+                <span>低</span>
                 <span v-if="task.priority === 'low'" class="material-symbols-outlined check-icon">check</span>
               </button>
             </div>
@@ -125,7 +125,7 @@
                   @click.stop="selectPriority(task.id, 'high')"
                 >
                   <span class="material-symbols-outlined priority-high-color" style="font-variation-settings: 'FILL' 1">flag</span>
-                  <span>High</span>
+                  <span>高</span>
                   <span v-if="task.priority === 'high'" class="material-symbols-outlined check-icon">check</span>
                 </button>
                 <button
@@ -133,7 +133,7 @@
                   @click.stop="selectPriority(task.id, 'medium')"
                 >
                   <span class="material-symbols-outlined priority-medium-color" style="font-variation-settings: 'FILL' 1">flag</span>
-                  <span>Medium</span>
+                  <span>中</span>
                   <span v-if="task.priority === 'medium'" class="material-symbols-outlined check-icon">check</span>
                 </button>
                 <button
@@ -141,7 +141,7 @@
                   @click.stop="selectPriority(task.id, 'low')"
                 >
                   <span class="material-symbols-outlined priority-low-color" style="font-variation-settings: 'FILL' 1">flag</span>
-                  <span>Low</span>
+                  <span>低</span>
                   <span v-if="task.priority === 'low'" class="material-symbols-outlined check-icon">check</span>
                 </button>
               </div>
@@ -151,7 +151,7 @@
           <!-- Progress Section -->
           <div class="progress-section">
             <div class="progress-header">
-              <span>Subtasks ({{ completedSubtasks(task) }}/{{ task.subtasks.length }})</span>
+              <span>子任务 ({{ completedSubtasks(task) }}/{{ task.subtasks.length }})</span>
               <span class="progress-percent">{{ taskProgress(task) }}%</span>
             </div>
             <div class="progress-bar">
@@ -179,7 +179,7 @@
             <input
               v-model="newSubtaskTitle"
               class="subtask-input"
-              placeholder="+ Add subtask..."
+              placeholder="+ 添加子任务..."
               @keydown.enter="addSubtask(task.id)"
             />
           </div>
@@ -189,8 +189,8 @@
 
     <!-- Footer Stats -->
     <div v-if="taskStore.tasks.length > 0" class="footer-stats">
-      <span>{{ taskStore.activeTasks.length }} active tasks remaining</span>
-      <button v-if="taskStore.completedTasks.length > 0" @click="clearCompleted">Clear completed</button>
+      <span>{{ taskStore.activeTasks.length }} 个待办任务</span>
+      <button v-if="taskStore.completedTasks.length > 0" @click="clearCompleted">清除已完成</button>
     </div>
   </div>
 </template>
