@@ -54,66 +54,74 @@
           :class="['task-card', { completed: task.status === 'done' }]"
           @click="taskStore.toggleExpand(task.id)"
         >
-          <div
-            :class="['task-checkbox', { checked: task.status === 'done' }]"
-            @click.stop="taskStore.toggleStatus(task.id)"
-          >
-            <span v-if="task.status === 'done'" class="material-symbols-outlined">check</span>
-          </div>
-          <input
-            v-if="editingTaskId === task.id"
-            v-model="editingTitle"
-            class="task-edit-input"
-            maxlength="200"
-            @click.stop
-            @blur="saveEdit(task.id)"
-            @keydown.enter="saveEdit(task.id)"
-            @keydown.escape="cancelEdit"
-            ref="editInput"
-          />
-          <span v-else :class="['task-title', { done: task.status === 'done' }]">{{ task.title }}</span>
-          <button
-            v-if="editingTaskId !== task.id"
-            class="edit-btn"
-            @click.stop="startEdit(task)"
-          >
-            <span class="material-symbols-outlined">edit</span>
-          </button>
-          <div class="priority-flag-wrapper">
-            <button
-              class="priority-icon-btn"
-              @click.stop="togglePriorityMenu(task.id)"
+          <div class="task-card-main">
+            <div
+              :class="['task-checkbox', { checked: task.status === 'done' }]"
+              @click.stop="taskStore.toggleStatus(task.id)"
             >
-              <span
-                :class="['material-symbols-outlined', 'priority-flag', priorityColorClass(task.priority), { completed: task.status === 'done' }]"
-                style="font-variation-settings: 'FILL' 1"
-              >flag</span>
+              <span v-if="task.status === 'done'" class="material-symbols-outlined">check</span>
+            </div>
+            <input
+              v-if="editingTaskId === task.id"
+              v-model="editingTitle"
+              class="task-edit-input"
+              maxlength="200"
+              @click.stop
+              @blur="saveEdit(task.id)"
+              @keydown.enter="saveEdit(task.id)"
+              @keydown.escape="cancelEdit"
+              ref="editInput"
+            />
+            <span v-else :class="['task-title', { done: task.status === 'done' }]">{{ task.title }}</span>
+            <button
+              v-if="editingTaskId !== task.id"
+              class="edit-btn"
+              @click.stop="startEdit(task)"
+            >
+              <span class="material-symbols-outlined">edit</span>
             </button>
-            <div v-if="activePriorityMenu === task.id" class="priority-menu">
+            <div class="priority-flag-wrapper">
               <button
-                :class="['priority-menu-item', { selected: task.priority === 'high' }]"
-                @click.stop="selectPriority(task.id, 'high')"
+                class="priority-icon-btn"
+                @click.stop="togglePriorityMenu(task.id)"
               >
-                <span class="material-symbols-outlined priority-high-color" style="font-variation-settings: 'FILL' 1">flag</span>
-                <span>高</span>
-                <span v-if="task.priority === 'high'" class="material-symbols-outlined check-icon">check</span>
+                <span
+                  :class="['material-symbols-outlined', 'priority-flag', priorityColorClass(task.priority), { completed: task.status === 'done' }]"
+                  style="font-variation-settings: 'FILL' 1"
+                >flag</span>
               </button>
-              <button
-                :class="['priority-menu-item', { selected: task.priority === 'medium' }]"
-                @click.stop="selectPriority(task.id, 'medium')"
-              >
-                <span class="material-symbols-outlined priority-medium-color" style="font-variation-settings: 'FILL' 1">flag</span>
-                <span>中</span>
-                <span v-if="task.priority === 'medium'" class="material-symbols-outlined check-icon">check</span>
-              </button>
-              <button
-                :class="['priority-menu-item', { selected: task.priority === 'low' }]"
-                @click.stop="selectPriority(task.id, 'low')"
-              >
-                <span class="material-symbols-outlined priority-low-color" style="font-variation-settings: 'FILL' 1">flag</span>
-                <span>低</span>
-                <span v-if="task.priority === 'low'" class="material-symbols-outlined check-icon">check</span>
-              </button>
+              <div v-if="activePriorityMenu === task.id" class="priority-menu">
+                <button
+                  :class="['priority-menu-item', { selected: task.priority === 'high' }]"
+                  @click.stop="selectPriority(task.id, 'high')"
+                >
+                  <span class="material-symbols-outlined priority-high-color" style="font-variation-settings: 'FILL' 1">flag</span>
+                  <span>高</span>
+                  <span v-if="task.priority === 'high'" class="material-symbols-outlined check-icon">check</span>
+                </button>
+                <button
+                  :class="['priority-menu-item', { selected: task.priority === 'medium' }]"
+                  @click.stop="selectPriority(task.id, 'medium')"
+                >
+                  <span class="material-symbols-outlined priority-medium-color" style="font-variation-settings: 'FILL' 1">flag</span>
+                  <span>中</span>
+                  <span v-if="task.priority === 'medium'" class="material-symbols-outlined check-icon">check</span>
+                </button>
+                <button
+                  :class="['priority-menu-item', { selected: task.priority === 'low' }]"
+                  @click.stop="selectPriority(task.id, 'low')"
+                >
+                  <span class="material-symbols-outlined priority-low-color" style="font-variation-settings: 'FILL' 1">flag</span>
+                  <span>低</span>
+                  <span v-if="task.priority === 'low'" class="material-symbols-outlined check-icon">check</span>
+                </button>
+              </div>
+            </div>
+          </div>
+          <div v-if="task.subtasks.length > 0" class="task-card-progress">
+            <span class="task-card-progress-label">{{ completedSubtasks(task) }}/{{ task.subtasks.length }}</span>
+            <div class="progress-bar compact">
+              <div class="progress-fill" :style="{ width: taskProgress(task) + '%' }"></div>
             </div>
           </div>
         </div>
@@ -185,7 +193,7 @@
           </div>
 
           <!-- Progress Section -->
-          <div class="progress-section">
+          <div v-if="task.subtasks.length > 0" class="progress-section">
             <div class="progress-header">
               <span>子任务 ({{ completedSubtasks(task) }}/{{ task.subtasks.length }})</span>
               <span class="progress-percent">{{ taskProgress(task) }}%</span>

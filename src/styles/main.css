@@ -425,11 +425,11 @@ body {
 }
 
 .priority-menu-item.selected {
-  background: rgba(0, 88, 190, 0.1);
+  background: color-mix(in srgb, var(--primary) 10%, transparent);
 }
 
 .priority-menu-item.selected:hover {
-  background: rgba(0, 88, 190, 0.2);
+  background: color-mix(in srgb, var(--primary) 20%, transparent);
 }
 
 .priority-menu-item .material-symbols-outlined {
@@ -459,10 +459,37 @@ body {
   padding: var(--spacing-md);
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
   display: flex;
-  align-items: center;
-  gap: var(--spacing-md);
+  flex-direction: column;
+  gap: var(--spacing-sm);
   cursor: pointer;
   transition: background 0.15s;
+}
+
+.task-card-main {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+  width: 100%;
+}
+
+.task-card-progress {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  padding-left: 32px;
+}
+
+.task-card-progress-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--on-surface-variant);
+  white-space: nowrap;
+}
+
+.progress-bar.compact {
+  height: 4px;
+  flex: 1;
+  margin-top: 0;
 }
 
 .task-card:hover {
@@ -493,7 +520,7 @@ body {
 
 .task-checkbox.checked {
   border-color: var(--primary);
-  background: rgba(0, 88, 190, 0.2);
+  background: color-mix(in srgb, var(--primary) 20%, transparent);
 }
 
 .task-checkbox.checked .material-symbols-outlined {
