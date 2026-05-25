@@ -268,18 +268,18 @@ body {
 }
 
 .tab {
-  width: 32px;
-  height: 32px;
   display: flex;
   align-items: center;
   justify-content: center;
+  gap: var(--spacing-xs);
   border: none;
   border-radius: var(--radius-full);
   cursor: pointer;
   transition: all 0.15s;
   background: transparent;
   color: var(--on-surface-variant);
-  padding: 0;
+  padding: 6px 12px;
+  height: 32px;
 }
 
 .tab.active {
@@ -292,7 +292,13 @@ body {
 }
 
 .tab .material-symbols-outlined {
-  font-size: 18px;
+  font-size: 16px;
+}
+
+.tab-label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
 }
 
 /* Main content */
@@ -344,7 +350,7 @@ body {
 }
 
 .quick-entry input:focus {
-  border-color: rgba(0, 88, 190, 0.5);
+  border-color: var(--primary);
 }
 
 .quick-entry input::placeholder {

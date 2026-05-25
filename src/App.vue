@@ -52,12 +52,14 @@
         @click="activeTab = 'tasks'"
       >
         <span class="material-symbols-outlined">check_circle</span>
+        <span class="tab-label">任务</span>
       </button>
       <button
         :class="['tab', { active: activeTab === 'reminders' }]"
         @click="activeTab = 'reminders'"
       >
         <span class="material-symbols-outlined">notifications</span>
+        <span class="tab-label">提醒</span>
       </button>
     </nav>
     <main class="content">
