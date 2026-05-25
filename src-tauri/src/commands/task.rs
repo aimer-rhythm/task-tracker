@@ -209,3 +209,162 @@ fn get_subtasks(conn: &rusqlite::Connection, task_id: &str) -> Result<Vec<Subtas
     }).map_err(|e| e.to_string())?;
     rows.collect::<Result<Vec<_>, _>>().map_err(|e| e.to_string())
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::db::Database;
+
+    fn setup_db() -> Database {
+        Database::new_in_memory().unwrap()
+    }
+
+    fn sample_task(id: &str, title: &str) -> Task {
+        Task {
+            id: id.to_string(),
+            title: title.to_string(),
+            description: String::new(),
+            status: "todo".to_string(),
+            priority: "medium".to_string(),
+            progress: 0,
+            category: String::new(),
+            tags: vec![],
+            subtasks: vec![],
+            due_date: None,
+            created_at: "2025-01-01T00:00:00Z".to_string(),
+            updated_at: "2025-01-01T00:00:00Z".to_string(),
+            completed_at: None,
+        }
+    }
+
+    fn insert_task(conn: &rusqlite::Connection, task: &Task) {
+        conn.execute(
+            "INSERT INTO tasks (id, title, description, status, priority, progress, category, due_date, created_at, updated_at, completed_at) VALUES (?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,?11)",
+            params![task.id, task.title, task.description, task.status, task.priority, task.progress, task.category, task.due_date, task.created_at, task.updated_at, task.completed_at],
+        ).unwrap();
+    }
+
+    #[test]
+    fn test_create_and_get_task() {
+        let db = setup_db();
+        let conn = db.conn.lock().unwrap();
+        let task = sample_task("t1", "Buy groceries");
+        insert_task(&conn, &task);
+
+        let fetched = get_task_internal(&conn, "t1").unwrap();
+        assert_eq!(fetched.id, "t1");
+        assert_eq!(fetched.title, "Buy groceries");
+        assert_eq!(fetched.status, "todo");
+        assert_eq!(fetched.priority, "medium");
+    }
+
+    #[test]
+    fn test_get_task_not_found() {
+        let db = setup_db();
+        let conn = db.conn.lock().unwrap();
+        let result = get_task_internal(&conn, "nonexistent");
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_list_tasks_with_filter() {
+        let db = setup_db();
+        let conn = db.conn.lock().unwrap();
+
+        let t1 = sample_task("t1", "Task A");
+        let mut t2 = sample_task("t2", "Task B");
+        t2.status = "done".to_string();
+        t2.priority = "high".to_string();
+        insert_task(&conn, &t1);
+        insert_task(&conn, &t2);
+
+        // filter by status
+        let mut sql = "SELECT id FROM tasks WHERE 1=1 AND status=?1".to_string();
+        let mut stmt = conn.prepare(&sql).unwrap();
+        let ids: Vec<String> = stmt.query_map(params!["done"], |row| row.get(0)).unwrap()
+            .filter_map(|r| r.ok()).collect();
+        assert_eq!(ids, vec!["t2"]);
+    }
+
+    #[test]
+    fn test_subtask_crud() {
+        let db = setup_db();
+        let conn = db.conn.lock().unwrap();
+        let task = sample_task("t1", "Parent task");
+        insert_task(&conn, &task);
+
+        // add subtask
+        conn.execute(
+            "INSERT INTO subtasks (id, task_id, title, is_done, sort_order) VALUES (?1,?2,?3,?4,?5)",
+            params!["s1", "t1", "Sub item", 0, 0],
+        ).unwrap();
+
+        let subs = get_subtasks(&conn, "t1").unwrap();
+        assert_eq!(subs.len(), 1);
+        assert_eq!(subs[0].title, "Sub item");
+        assert!(!subs[0].is_done);
+
+        // toggle subtask
+        conn.execute(
+            "UPDATE subtasks SET is_done = CASE WHEN is_done=0 THEN 1 ELSE 0 END WHERE id=?1 AND task_id=?2",
+            params!["s1", "t1"],
+        ).unwrap();
+
+        let subs = get_subtasks(&conn, "t1").unwrap();
+        assert!(subs[0].is_done);
+
+        // delete subtask
+        conn.execute("DELETE FROM subtasks WHERE id=?1 AND task_id=?2", params!["s1", "t1"]).unwrap();
+        let subs = get_subtasks(&conn, "t1").unwrap();
+        assert!(subs.is_empty());
+    }
+
+    #[test]
+    fn test_delete_task_cascades_subtasks() {
+        let db = setup_db();
+        let conn = db.conn.lock().unwrap();
+        // enable foreign keys
+        conn.execute_batch("PRAGMA foreign_keys = ON").unwrap();
+
+        let task = sample_task("t1", "Parent");
+        insert_task(&conn, &task);
+        conn.execute(
+            "INSERT INTO subtasks (id, task_id, title, is_done, sort_order) VALUES (?1,?2,?3,?4,?5)",
+            params!["s1", "t1", "Child", 0, 0],
+        ).unwrap();
+
+        conn.execute("DELETE FROM tasks WHERE id=?1", params!["t1"]).unwrap();
+        let subs = get_subtasks(&conn, "t1").unwrap();
+        assert!(subs.is_empty());
+    }
+
+    #[test]
+    fn test_update_task_fields() {
+        let db = setup_db();
+        let conn = db.conn.lock().unwrap();
+        let task = sample_task("t1", "Original");
+        insert_task(&conn, &task);
+
+        conn.execute("UPDATE tasks SET title=?1, updated_at=?2 WHERE id=?3",
+            params!["Updated Title", "2025-01-02T00:00:00Z", "t1"]).unwrap();
+
+        let fetched = get_task_internal(&conn, "t1").unwrap();
+        assert_eq!(fetched.title, "Updated Title");
+        assert_eq!(fetched.updated_at, "2025-01-02T00:00:00Z");
+    }
+
+    #[test]
+    fn test_search_filter() {
+        let db = setup_db();
+        let conn = db.conn.lock().unwrap();
+
+        insert_task(&conn, &sample_task("t1", "Buy milk"));
+        insert_task(&conn, &sample_task("t2", "Read book"));
+        insert_task(&conn, &sample_task("t3", "Buy eggs"));
+
+        let mut stmt = conn.prepare("SELECT id FROM tasks WHERE title LIKE ?1").unwrap();
+        let ids: Vec<String> = stmt.query_map(params!["%Buy%"], |row| row.get(0)).unwrap()
+            .filter_map(|r| r.ok()).collect();
+        assert_eq!(ids.len(), 2);
+    }
+}

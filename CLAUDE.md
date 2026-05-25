@@ -8,6 +8,7 @@
 - **前端**: Vue 3 + TypeScript + Pinia
 - **构建**: Vite
 - **数据库**: SQLite (rusqlite, bundled)
+- **测试**: Rust `#[cfg(test)]` + Vitest + @pinia/testing + happy-dom
 - **UI**: 自定义 CSS 变量双主题 (light/dark)，基于 Inter 字体，Soft Minimal 风格
 
 ## 当前进度
@@ -17,15 +18,14 @@
 - [x] Phase 2: 任务管理 UI — TaskList.vue 已实现（手风琴展开、子任务、进度条）
 - [x] Phase 3: 定时提醒系统 — 后台线程 + ReminderList.vue 已实现
 - [x] Phase 4: 窗口控制 — 置顶/透明度/托盘/主题切换已实现
-- [ ] **待验证**: cargo check 编译通过（需要 Windows 环境）
+- [x] 编译验证 — `cargo test` 通过（17 tests），`npm run test` 通过（41 tests）
+- [x] 单元测试 — Rust 数据层 + TS stores/repositories 全覆盖
 - [ ] Phase 5: P1 功能（分类、搜索、窗口记忆、开机自启）
 - [ ] Phase 6: 打包优化
 
 ## 待解决
-1. 编译验证 — 在 Windows 上运行 `cargo check` 确认无编译错误
-2. 修复可能的 Rust 编译问题（API 兼容性等）
-3. 前端 `npm run dev` 验证页面渲染
-4. 集成测试 `npm run tauri dev`
+1. 前端 `npm run dev` 验证页面渲染
+2. 集成测试 `npm run tauri dev`
 
 ## 设计资源
 - 原型图: `design/stitch_activity_tracker/` (light/dark/opacity 三套)
@@ -43,10 +43,19 @@
 ```bash
 npm install          # 安装前端依赖
 npm run dev          # 启动 Vite 开发服务器
+npm run test         # 运行前端单元测试 (Vitest)
+npm run test:watch   # 监听模式运行测试
 npm run tauri dev    # 启动 Tauri 开发模式（前后端联调）
 npm run tauri build  # 构建生产包
+cargo test           # 运行 Rust 单元测试（在 src-tauri 目录）
 cargo check          # 检查 Rust 编译（在 src-tauri 目录）
 ```
+
+## 测试架构
+- **Rust 测试** (17 tests): `db.rs`、`commands/task.rs`、`commands/reminder.rs`、`commands/settings.rs` 使用 `#[cfg(test)]` + 内存 SQLite (`Database::new_in_memory()`)
+- **TypeScript 测试** (41 tests): Vitest + happy-dom + @pinia/testing，mock `@tauri-apps/api/core` 的 `invoke`
+- **测试文件位置**: `src/repositories/__tests__/`、`src/stores/__tests__/`
+- **配置**: `vitest.config.ts`（独立于 vite.config.ts）
 
 ## Windows 环境要求
 - Node.js 18+

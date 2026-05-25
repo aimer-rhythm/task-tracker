@@ -16,6 +16,14 @@ impl Database {
         Ok(db)
     }
 
+    #[cfg(test)]
+    pub fn new_in_memory() -> Result<Self> {
+        let conn = Connection::open_in_memory()?;
+        let db = Self { conn: Mutex::new(conn) };
+        db.init_tables()?;
+        Ok(db)
+    }
+
     fn init_tables(&self) -> Result<()> {
         let conn = self.conn.lock().unwrap();
         conn.execute_batch("
@@ -59,5 +67,32 @@ impl Database {
             );
         ")?;
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_new_in_memory_creates_tables() {
+        let db = Database::new_in_memory().unwrap();
+        let conn = db.conn.lock().unwrap();
+
+        let count: i32 = conn
+            .query_row(
+                "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name IN ('tasks','subtasks','reminders','app_settings')",
+                [],
+                |row| row.get(0),
+            )
+            .unwrap();
+        assert_eq!(count, 4);
+    }
+
+    #[test]
+    fn test_tables_are_idempotent() {
+        let db = Database::new_in_memory().unwrap();
+        // calling init_tables again should not fail
+        db.init_tables().unwrap();
     }
 }

@@ -108,3 +108,43 @@ pub fn set_window_opacity(window: tauri::Window, opacity: f64) -> Result<(), Str
 pub fn minimize_to_tray(window: tauri::Window) -> Result<(), String> {
     window.hide().map_err(|e| e.to_string())
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::db::Database;
+    use rusqlite::params;
+
+    fn setup_db() -> Database {
+        Database::new_in_memory().unwrap()
+    }
+
+    #[test]
+    fn test_set_and_get_settings() {
+        let db = setup_db();
+        let conn = db.conn.lock().unwrap();
+
+        conn.execute("INSERT OR REPLACE INTO app_settings (key, value) VALUES (?1, ?2)", params!["theme", "dark"]).unwrap();
+        conn.execute("INSERT OR REPLACE INTO app_settings (key, value) VALUES (?1, ?2)", params!["opacity", "80"]).unwrap();
+
+        let mut stmt = conn.prepare("SELECT key, value FROM app_settings").unwrap();
+        let rows: Vec<(String, String)> = stmt.query_map([], |row| {
+            Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?))
+        }).unwrap().filter_map(|r| r.ok()).collect();
+
+        assert_eq!(rows.len(), 2);
+        assert!(rows.contains(&("theme".to_string(), "dark".to_string())));
+        assert!(rows.contains(&("opacity".to_string(), "80".to_string())));
+    }
+
+    #[test]
+    fn test_setting_upsert() {
+        let db = setup_db();
+        let conn = db.conn.lock().unwrap();
+
+        conn.execute("INSERT OR REPLACE INTO app_settings (key, value) VALUES (?1, ?2)", params!["theme", "light"]).unwrap();
+        conn.execute("INSERT OR REPLACE INTO app_settings (key, value) VALUES (?1, ?2)", params!["theme", "dark"]).unwrap();
+
+        let val: String = conn.query_row("SELECT value FROM app_settings WHERE key=?1", params!["theme"], |row| row.get(0)).unwrap();
+        assert_eq!(val, "dark");
+    }
+}

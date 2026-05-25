@@ -7,7 +7,9 @@
     "dev": "vite",
     "build": "vue-tsc --noEmit && vite build",
     "preview": "vite preview",
-    "tauri": "tauri"
+    "tauri": "tauri",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "keywords": [],
   "author": "",
@@ -20,10 +22,13 @@
     "vue-router": "^5.0.7"
   },
   "devDependencies": {
+    "@pinia/testing": "^1.0.3",
     "@tauri-apps/cli": "^2.11.2",
     "@vitejs/plugin-vue": "^6.0.7",
+    "happy-dom": "^20.9.0",
     "typescript": "^6.0.3",
     "vite": "^8.0.14",
+    "vitest": "^4.1.7",
     "vue-tsc": "^3.3.1"
   }
 }
