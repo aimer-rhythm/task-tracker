@@ -380,6 +380,7 @@ body {
 .priority-flag-wrapper {
   position: relative;
   flex-shrink: 0;
+  margin-left: calc(-1 * var(--spacing-sm));
 }
 
 .priority-high-color { color: #ef4444; }
@@ -527,6 +528,49 @@ body {
   color: rgba(156, 163, 175, 0.5);
 }
 
+/* Edit button */
+.edit-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px;
+  border-radius: var(--radius-lg);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.15s, background 0.15s;
+  flex-shrink: 0;
+}
+
+.task-card:hover .edit-btn,
+.task-expanded-header:hover .edit-btn {
+  opacity: 1;
+}
+
+.edit-btn:hover {
+  background: var(--surface-container-high);
+}
+
+.edit-btn .material-symbols-outlined {
+  font-size: 16px;
+  color: var(--on-surface-variant);
+}
+
+/* Inline edit input */
+.task-edit-input {
+  flex: 1;
+  font-size: 12px;
+  line-height: 18px;
+  font-family: var(--font-family);
+  color: var(--on-surface);
+  background: var(--surface-container-low);
+  border: 1px solid var(--primary);
+  border-radius: var(--radius-lg);
+  padding: 2px 8px;
+  outline: none;
+}
+
 /* Expanded task card */
 .task-expanded {
   background: var(--surface-container);
@@ -603,7 +647,7 @@ body {
   color: var(--on-surface-variant);
 }
 
-.subtask-item.done span {
+.subtask-item.done span:not(.material-symbols-outlined) {
   text-decoration: line-through;
   opacity: 0.6;
 }
@@ -611,6 +655,7 @@ body {
 .subtask-item .material-symbols-outlined {
   font-size: 16px;
   color: var(--primary);
+  cursor: pointer;
 }
 
 .subtask-item .unchecked {
