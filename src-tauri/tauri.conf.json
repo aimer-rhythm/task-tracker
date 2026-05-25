@@ -16,6 +16,8 @@
         "title": "TaskTracker",
         "width": 420,
         "height": 560,
+        "minWidth": 420,
+        "minHeight": 560,
         "resizable": true,
         "decorations": false,
         "transparent": true,
