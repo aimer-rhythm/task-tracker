@@ -112,13 +112,18 @@ async function setupWindowListeners() {
     saveWindowState({ window_x: String(payload.x), window_y: String(payload.y) });
   });
   const unlisten2 = await win.onResized(({ payload }) => {
-    saveWindowState({ window_width: String(payload.width), window_height: String(payload.height) });
+    if (payload.width >= 420 && payload.height >= 560) {
+      saveWindowState({ window_width: String(payload.width), window_height: String(payload.height) });
+    }
   });
   unlisteners.push(unlisten1, unlisten2);
 }
 
-onMounted(() => {
+onMounted(async () => {
   document.addEventListener('click', closeSettingsOnOutsideClick);
+  await settingsStore.loadSettings();
+  theme.value = settingsStore.theme;
+  opacity.value = settingsStore.opacity;
   setupWindowListeners();
 });
 
@@ -147,6 +152,6 @@ function minimizeWindow() {
 }
 
 function closeWindow() {
-  settingsStore.minimizeToTray();
+  getCurrentWindow().close();
 }
 </script>

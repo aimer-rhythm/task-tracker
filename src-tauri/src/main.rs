@@ -17,7 +17,7 @@ fn restore_window_state(window: &tauri::WebviewWindow, db: &Database) {
         Ok(c) => c,
         Err(_) => return,
     };
-    let mut stmt = match conn.prepare("SELECT key, value FROM app_settings WHERE key LIKE 'window_%'") {
+    let mut stmt = match conn.prepare("SELECT key, value FROM app_settings") {
         Ok(s) => s,
         Err(_) => return,
     };
@@ -37,8 +37,43 @@ fn restore_window_state(window: &tauri::WebviewWindow, db: &Database) {
         let _ = window.set_position(PhysicalPosition::new(x, y));
     }
     if let (Some(w), Some(h)) = (w, h) {
-        use tauri::PhysicalSize;
-        let _ = window.set_size(PhysicalSize::new(w, h));
+        if w >= 420 && h >= 560 {
+            use tauri::PhysicalSize;
+            let _ = window.set_size(PhysicalSize::new(w, h));
+        }
+    }
+
+    #[cfg(windows)]
+    {
+        use raw_window_handle::{HasWindowHandle, RawWindowHandle};
+        use windows_sys::Win32::UI::WindowsAndMessaging::*;
+
+        let hwnd = match window.window_handle() {
+            Ok(handle) => match handle.as_raw() {
+                RawWindowHandle::Win32(win32) => win32.hwnd.get() as *mut std::ffi::c_void,
+                _ => return,
+            },
+            Err(_) => return,
+        };
+
+        let opacity_val = rows.get("opacity").and_then(|v| v.parse::<f64>().ok()).unwrap_or(100.0);
+        let always_on_top = rows.get("always_on_top").map(|v| v == "true").unwrap_or(false);
+
+        unsafe {
+            let ex_style = GetWindowLongPtrW(hwnd, GWL_EXSTYLE);
+            SetWindowLongPtrW(hwnd, GWL_EXSTYLE, ex_style | WS_EX_LAYERED as isize);
+
+            if always_on_top {
+                SetWindowPos(hwnd, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
+                let ex_style = GetWindowLongPtrW(hwnd, GWL_EXSTYLE);
+                SetWindowLongPtrW(hwnd, GWL_EXSTYLE, ex_style | WS_EX_LAYERED as isize);
+            }
+
+            if opacity_val < 100.0 {
+                let alpha = ((opacity_val / 100.0).clamp(0.0, 1.0) * 255.0) as u8;
+                SetLayeredWindowAttributes(hwnd, 0, alpha, LWA_ALPHA);
+            }
+        }
     }
 }
 

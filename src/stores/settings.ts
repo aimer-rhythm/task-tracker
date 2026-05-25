@@ -16,6 +16,7 @@ export const useSettingsStore = defineStore("settings", () => {
   function setOpacity(val: number) {
     opacity.value = val;
     invoke("set_window_opacity", { opacity: val / 100 }).catch(() => {});
+    invoke("set_setting", { key: "opacity", value: String(val) }).catch(() => {});
   }
 
   function reapplyOpacity() {
@@ -30,6 +31,7 @@ export const useSettingsStore = defineStore("settings", () => {
       enabled: alwaysOnTop.value,
       currentOpacity: opacity.value / 100,
     }).catch(() => {});
+    invoke("set_setting", { key: "always_on_top", value: String(alwaysOnTop.value) }).catch(() => {});
   }
 
   function minimizeToTray() {
@@ -42,6 +44,16 @@ export const useSettingsStore = defineStore("settings", () => {
       if (saved.theme) theme.value = saved.theme as "light" | "dark";
       if (saved.opacity) opacity.value = Number(saved.opacity);
       if (saved.always_on_top) alwaysOnTop.value = saved.always_on_top === "true";
+
+      if (opacity.value < 100) {
+        invoke("set_window_opacity", { opacity: opacity.value / 100 }).catch(() => {});
+      }
+      if (alwaysOnTop.value) {
+        invoke("set_always_on_top", {
+          enabled: true,
+          currentOpacity: opacity.value / 100,
+        }).catch(() => {});
+      }
     } catch {
       // defaults are fine
     }

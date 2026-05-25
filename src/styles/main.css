@@ -164,6 +164,10 @@ body {
   background: rgba(0, 26, 66, 0.1);
 }
 
+.dark .btn-icon:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+
 .btn-icon:active {
   transform: scale(0.95);
 }
