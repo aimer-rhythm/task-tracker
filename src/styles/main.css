@@ -318,6 +318,7 @@ body {
 /* Quick entry input */
 .quick-entry {
   position: relative;
+  z-index: 30;
   display: flex;
   align-items: center;
   margin-bottom: var(--spacing-md);
