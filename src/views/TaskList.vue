@@ -193,31 +193,33 @@
           </div>
 
           <!-- Progress Section -->
-          <div v-if="task.subtasks.length > 0" class="progress-section">
-            <div class="progress-header">
-              <span>子任务 ({{ completedSubtasks(task) }}/{{ task.subtasks.length }})</span>
-              <span class="progress-percent">{{ taskProgress(task) }}%</span>
-            </div>
-            <div class="progress-bar">
-              <div class="progress-fill" :style="{ width: taskProgress(task) + '%' }"></div>
-            </div>
+          <div class="progress-section">
+            <template v-if="task.subtasks.length > 0">
+              <div class="progress-header">
+                <span>子任务 ({{ completedSubtasks(task) }}/{{ task.subtasks.length }})</span>
+                <span class="progress-percent">{{ taskProgress(task) }}%</span>
+              </div>
+              <div class="progress-bar">
+                <div class="progress-fill" :style="{ width: taskProgress(task) + '%' }"></div>
+              </div>
 
-            <!-- Subtasks -->
-            <ul class="subtask-list">
-              <li
-                v-for="sub in task.subtasks"
-                :key="sub.id"
-                :class="['subtask-item', { done: sub.isDone }]"
-              >
-                <span
-                  class="material-symbols-outlined"
-                  :class="sub.isDone ? '' : 'unchecked'"
-                  :style="sub.isDone ? 'font-variation-settings: \'FILL\' 1' : ''"
-                  @click="taskStore.toggleSubtask(task.id, sub.id)"
-                >{{ sub.isDone ? 'check_box' : 'check_box_outline_blank' }}</span>
-                <span>{{ sub.title }}</span>
-              </li>
-            </ul>
+              <!-- Subtasks -->
+              <ul class="subtask-list">
+                <li
+                  v-for="sub in task.subtasks"
+                  :key="sub.id"
+                  :class="['subtask-item', { done: sub.isDone }]"
+                >
+                  <span
+                    class="material-symbols-outlined"
+                    :class="sub.isDone ? '' : 'unchecked'"
+                    :style="sub.isDone ? 'font-variation-settings: \'FILL\' 1' : ''"
+                    @click="taskStore.toggleSubtask(task.id, sub.id)"
+                  >{{ sub.isDone ? 'check_box' : 'check_box_outline_blank' }}</span>
+                  <span>{{ sub.title }}</span>
+                </li>
+              </ul>
+            </template>
 
             <!-- Add subtask -->
             <input
