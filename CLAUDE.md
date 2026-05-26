@@ -15,17 +15,19 @@
 - [x] Phase 1: 项目初始化 — 骨架已搭建完成
 - [x] Phase 1.2: SQLite 数据层 — Rust commands 已实现
 - [x] Phase 1.3-1.4: 前端数据层 + Store — Repository 接口 + Pinia 已实现
-- [x] Phase 2: 任务管理 UI — TaskList.vue 已实现（手风琴展开、子任务、进度条）
+- [x] Phase 2: 任务管理 UI — TaskList.vue 已实现（手风琴展开、子任务、进度条、内联编辑）
 - [x] Phase 3: 定时提醒系统 — 后台线程 + ReminderList.vue 已实现
 - [x] Phase 4: 窗口控制 — 置顶/透明度/托盘/主题切换已实现
+- [x] Phase 4.5: 设置持久化 — 置顶、主题、透明度跨重启恢复（Rust 侧 Win32 API 直接应用）
+- [x] Phase 4.6: 窗口记忆 — 位置/尺寸保存与恢复，含 0 宽高防护
 - [x] 编译验证 — `cargo test` 通过（17 tests），`npm run test` 通过（41 tests）
 - [x] 单元测试 — Rust 数据层 + TS stores/repositories 全覆盖
-- [ ] Phase 5: P1 功能（分类、搜索、窗口记忆、开机自启）
+- [x] UI 打磨 — 图标统一 16px、tab 图标+文字、收起态进度条、中文本地化
+- [ ] Phase 5: P1 功能（分类、搜索、开机自启）
 - [ ] Phase 6: 打包优化
 
-## 待解决
-1. 前端 `npm run dev` 验证页面渲染
-2. 集成测试 `npm run tauri dev`
+## 已知问题
+1. 新建任务可能立即显示为完成状态（疑似前端渲染或数据问题，待复现排查）
 
 ## 设计资源
 - 原型图: `design/stitch_activity_tracker/` (light/dark/opacity 三套)
@@ -38,6 +40,8 @@
 - 提醒系统使用 Rust 后台线程轮询 + Windows 系统通知
 - 窗口无边框 (decorations: false)，自定义标题栏拖拽
 - CSS 变量实现主题切换，`.light` / `.dark` class 切换
+- 设置持久化双保险：Rust setup() 直接通过 Win32 API 恢复 + 前端 loadSettings() 兜底
+- 窗口状态保存带防护：onResized 过滤 0x0，restore_window_state 校验最小尺寸
 
 ## 关键命令
 ```bash
