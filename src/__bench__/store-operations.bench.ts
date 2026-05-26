@@ -59,21 +59,21 @@ describe("TaskStore — computed filters", () => {
     setActivePinia(createPinia());
     const store = useTaskStore();
     store.tasks = makeTasks(100);
-    const _ = store.activeTasks;
+    void store.activeTasks;
   });
 
   bench("completedTasks filter (100 items)", () => {
     setActivePinia(createPinia());
     const store = useTaskStore();
     store.tasks = makeTasks(100);
-    const _ = store.completedTasks;
+    void store.completedTasks;
   });
 
   bench("activeTasks filter (500 items)", () => {
     setActivePinia(createPinia());
     const store = useTaskStore();
     store.tasks = makeTasks(500);
-    const _ = store.activeTasks;
+    void store.activeTasks;
   });
 });
 
