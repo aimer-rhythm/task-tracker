@@ -34,6 +34,7 @@
 - 设计系统: `design/stitch_activity_tracker/precision_soft_minimal/DESIGN.md`
 - 需求文档: `docs/REQUIREMENTS.md`
 - 实施计划: `docs/IMPLEMENTATION_PLAN.md`
+- 测试与性能报告: `docs/TESTING.md`
 
 ## 架构要点
 - 数据层通过 Repository 接口抽象，预留云同步（当前仅本地 SQLite）
