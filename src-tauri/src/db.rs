@@ -1,6 +1,6 @@
 use rusqlite::{Connection, Result};
-use std::sync::Mutex;
 use std::path::PathBuf;
+use std::sync::Mutex;
 
 pub struct Database {
     pub conn: Mutex<Connection>,
@@ -11,7 +11,9 @@ impl Database {
         std::fs::create_dir_all(&app_dir).ok();
         let db_path = app_dir.join("tasks.db");
         let conn = Connection::open(db_path)?;
-        let db = Self { conn: Mutex::new(conn) };
+        let db = Self {
+            conn: Mutex::new(conn),
+        };
         db.init_tables()?;
         Ok(db)
     }
@@ -19,14 +21,17 @@ impl Database {
     #[cfg(test)]
     pub fn new_in_memory() -> Result<Self> {
         let conn = Connection::open_in_memory()?;
-        let db = Self { conn: Mutex::new(conn) };
+        let db = Self {
+            conn: Mutex::new(conn),
+        };
         db.init_tables()?;
         Ok(db)
     }
 
     fn init_tables(&self) -> Result<()> {
         let conn = self.conn.lock().unwrap();
-        conn.execute_batch("
+        conn.execute_batch(
+            "
             CREATE TABLE IF NOT EXISTS tasks (
                 id TEXT PRIMARY KEY,
                 title TEXT NOT NULL,
@@ -65,7 +70,8 @@ impl Database {
                 key TEXT PRIMARY KEY,
                 value TEXT NOT NULL
             );
-        ")?;
+        ",
+        )?;
         Ok(())
     }
 }

@@ -1,8 +1,8 @@
+use crate::db::Database;
+use rusqlite::{params, OptionalExtension, Row};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use tauri::State;
-use crate::db::Database;
-use rusqlite::params;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
@@ -50,8 +50,7 @@ pub struct UpdateTaskData {
     pub priority: Option<String>,
     pub progress: Option<i32>,
     pub category: Option<String>,
-    pub due_date: Option<String>,
-    pub updated_at: Option<String>,
+    pub due_date: Option<Option<String>>,
 }
 
 #[tauri::command]
@@ -65,18 +64,68 @@ pub fn create_task(db: State<Arc<Database>>, task: Task) -> Result<(), String> {
 }
 
 #[tauri::command]
-pub fn update_task(db: State<Arc<Database>>, id: String, data: UpdateTaskData) -> Result<Task, String> {
+pub fn update_task(
+    db: State<Arc<Database>>,
+    id: String,
+    data: UpdateTaskData,
+) -> Result<Task, String> {
     let conn = db.conn.lock().map_err(|e| e.to_string())?;
     let now = chrono::Utc::now().to_rfc3339();
 
-    if let Some(ref title) = data.title { conn.execute("UPDATE tasks SET title=?1, updated_at=?2 WHERE id=?3", params![title, now, id]).map_err(|e| e.to_string())?; }
-    if let Some(ref desc) = data.description { conn.execute("UPDATE tasks SET description=?1, updated_at=?2 WHERE id=?3", params![desc, now, id]).map_err(|e| e.to_string())?; }
-    if let Some(ref status) = data.status {
-        let completed_at = if status == "done" { Some(now.clone()) } else { None };
-        conn.execute("UPDATE tasks SET status=?1, completed_at=?2, updated_at=?3 WHERE id=?4", params![status, completed_at, now, id]).map_err(|e| e.to_string())?;
+    if let Some(ref title) = data.title {
+        conn.execute(
+            "UPDATE tasks SET title=?1, updated_at=?2 WHERE id=?3",
+            params![title, now, id],
+        )
+        .map_err(|e| e.to_string())?;
     }
-    if let Some(ref priority) = data.priority { conn.execute("UPDATE tasks SET priority=?1, updated_at=?2 WHERE id=?3", params![priority, now, id]).map_err(|e| e.to_string())?; }
-    if let Some(progress) = data.progress { conn.execute("UPDATE tasks SET progress=?1, updated_at=?2 WHERE id=?3", params![progress, now, id]).map_err(|e| e.to_string())?; }
+    if let Some(ref desc) = data.description {
+        conn.execute(
+            "UPDATE tasks SET description=?1, updated_at=?2 WHERE id=?3",
+            params![desc, now, id],
+        )
+        .map_err(|e| e.to_string())?;
+    }
+    if let Some(ref status) = data.status {
+        let completed_at = if status == "done" {
+            Some(now.clone())
+        } else {
+            None
+        };
+        conn.execute(
+            "UPDATE tasks SET status=?1, completed_at=?2, updated_at=?3 WHERE id=?4",
+            params![status, completed_at, now, id],
+        )
+        .map_err(|e| e.to_string())?;
+    }
+    if let Some(ref priority) = data.priority {
+        conn.execute(
+            "UPDATE tasks SET priority=?1, updated_at=?2 WHERE id=?3",
+            params![priority, now, id],
+        )
+        .map_err(|e| e.to_string())?;
+    }
+    if let Some(progress) = data.progress {
+        conn.execute(
+            "UPDATE tasks SET progress=?1, updated_at=?2 WHERE id=?3",
+            params![progress, now, id],
+        )
+        .map_err(|e| e.to_string())?;
+    }
+    if let Some(ref category) = data.category {
+        conn.execute(
+            "UPDATE tasks SET category=?1, updated_at=?2 WHERE id=?3",
+            params![category, now, id],
+        )
+        .map_err(|e| e.to_string())?;
+    }
+    if let Some(due_date) = data.due_date {
+        conn.execute(
+            "UPDATE tasks SET due_date=?1, updated_at=?2 WHERE id=?3",
+            params![due_date, now, id],
+        )
+        .map_err(|e| e.to_string())?;
+    }
 
     get_task_internal(&conn, &id)
 }
@@ -84,15 +133,17 @@ pub fn update_task(db: State<Arc<Database>>, id: String, data: UpdateTaskData) -
 #[tauri::command]
 pub fn delete_task(db: State<Arc<Database>>, id: String) -> Result<(), String> {
     let conn = db.conn.lock().map_err(|e| e.to_string())?;
-    conn.execute("DELETE FROM subtasks WHERE task_id=?1", params![id]).map_err(|e| e.to_string())?;
-    conn.execute("DELETE FROM tasks WHERE id=?1", params![id]).map_err(|e| e.to_string())?;
+    conn.execute("DELETE FROM subtasks WHERE task_id=?1", params![id])
+        .map_err(|e| e.to_string())?;
+    conn.execute("DELETE FROM tasks WHERE id=?1", params![id])
+        .map_err(|e| e.to_string())?;
     Ok(())
 }
 
 #[tauri::command]
 pub fn get_task(db: State<Arc<Database>>, id: String) -> Result<Option<Task>, String> {
     let conn = db.conn.lock().map_err(|e| e.to_string())?;
-    Ok(Some(get_task_internal(&conn, &id)?))
+    get_task_optional(&conn, &id)
 }
 
 #[tauri::command]
@@ -109,31 +160,22 @@ pub fn list_tasks(db: State<Arc<Database>>, filter: TaskFilter) -> Result<Vec<Ta
         sql.push_str(" AND priority=?");
         params_vec.push(Box::new(priority.clone()));
     }
+    if let Some(ref category) = filter.category {
+        sql.push_str(" AND category=?");
+        params_vec.push(Box::new(category.clone()));
+    }
     if let Some(ref search) = filter.search {
         sql.push_str(" AND title LIKE ?");
         params_vec.push(Box::new(format!("%{}%", search)));
     }
     sql.push_str(" ORDER BY created_at DESC");
 
-    let params_refs: Vec<&dyn rusqlite::types::ToSql> = params_vec.iter().map(|p| p.as_ref()).collect();
+    let params_refs: Vec<&dyn rusqlite::types::ToSql> =
+        params_vec.iter().map(|p| p.as_ref()).collect();
     let mut stmt = conn.prepare(&sql).map_err(|e| e.to_string())?;
-    let rows = stmt.query_map(params_refs.as_slice(), |row| {
-        Ok(Task {
-            id: row.get(0)?,
-            title: row.get(1)?,
-            description: row.get(2)?,
-            status: row.get(3)?,
-            priority: row.get(4)?,
-            progress: row.get(5)?,
-            category: row.get(6)?,
-            tags: vec![],
-            subtasks: vec![],
-            due_date: row.get(7)?,
-            created_at: row.get(8)?,
-            updated_at: row.get(9)?,
-            completed_at: row.get(10)?,
-        })
-    }).map_err(|e| e.to_string())?;
+    let rows = stmt
+        .query_map(params_refs.as_slice(), task_from_row)
+        .map_err(|e| e.to_string())?;
 
     let mut tasks: Vec<Task> = vec![];
     for row in rows {
@@ -145,17 +187,32 @@ pub fn list_tasks(db: State<Arc<Database>>, filter: TaskFilter) -> Result<Vec<Ta
 }
 
 #[tauri::command]
-pub fn add_subtask(db: State<Arc<Database>>, task_id: String, subtask: Subtask) -> Result<(), String> {
+pub fn add_subtask(
+    db: State<Arc<Database>>,
+    task_id: String,
+    subtask: Subtask,
+) -> Result<(), String> {
     let conn = db.conn.lock().map_err(|e| e.to_string())?;
     conn.execute(
         "INSERT INTO subtasks (id, task_id, title, is_done, sort_order) VALUES (?1,?2,?3,?4,?5)",
-        params![subtask.id, task_id, subtask.title, subtask.is_done as i32, subtask.sort_order],
-    ).map_err(|e| e.to_string())?;
+        params![
+            subtask.id,
+            task_id,
+            subtask.title,
+            subtask.is_done as i32,
+            subtask.sort_order
+        ],
+    )
+    .map_err(|e| e.to_string())?;
     Ok(())
 }
 
 #[tauri::command]
-pub fn toggle_subtask(db: State<Arc<Database>>, task_id: String, subtask_id: String) -> Result<(), String> {
+pub fn toggle_subtask(
+    db: State<Arc<Database>>,
+    task_id: String,
+    subtask_id: String,
+) -> Result<(), String> {
     let conn = db.conn.lock().map_err(|e| e.to_string())?;
     conn.execute(
         "UPDATE subtasks SET is_done = CASE WHEN is_done=0 THEN 1 ELSE 0 END WHERE id=?1 AND task_id=?2",
@@ -165,49 +222,72 @@ pub fn toggle_subtask(db: State<Arc<Database>>, task_id: String, subtask_id: Str
 }
 
 #[tauri::command]
-pub fn delete_subtask(db: State<Arc<Database>>, task_id: String, subtask_id: String) -> Result<(), String> {
+pub fn delete_subtask(
+    db: State<Arc<Database>>,
+    task_id: String,
+    subtask_id: String,
+) -> Result<(), String> {
     let conn = db.conn.lock().map_err(|e| e.to_string())?;
-    conn.execute("DELETE FROM subtasks WHERE id=?1 AND task_id=?2", params![subtask_id, task_id]).map_err(|e| e.to_string())?;
+    conn.execute(
+        "DELETE FROM subtasks WHERE id=?1 AND task_id=?2",
+        params![subtask_id, task_id],
+    )
+    .map_err(|e| e.to_string())?;
     Ok(())
 }
 
 fn get_task_internal(conn: &rusqlite::Connection, id: &str) -> Result<Task, String> {
+    get_task_optional(conn, id)?.ok_or_else(|| "Task not found".to_string())
+}
+
+fn get_task_optional(conn: &rusqlite::Connection, id: &str) -> Result<Option<Task>, String> {
     let mut stmt = conn.prepare("SELECT id, title, description, status, priority, progress, category, due_date, created_at, updated_at, completed_at FROM tasks WHERE id=?1")
         .map_err(|e| e.to_string())?;
-    let task = stmt.query_row(params![id], |row| {
-        Ok(Task {
-            id: row.get(0)?,
-            title: row.get(1)?,
-            description: row.get(2)?,
-            status: row.get(3)?,
-            priority: row.get(4)?,
-            progress: row.get(5)?,
-            category: row.get(6)?,
-            tags: vec![],
-            subtasks: vec![],
-            due_date: row.get(7)?,
-            created_at: row.get(8)?,
-            updated_at: row.get(9)?,
-            completed_at: row.get(10)?,
-        })
-    }).map_err(|e| e.to_string())?;
-    let mut task = task;
-    task.subtasks = get_subtasks(conn, &task.id).unwrap_or_default();
-    Ok(task)
+    let task = stmt
+        .query_row(params![id], task_from_row)
+        .optional()
+        .map_err(|e| e.to_string())?;
+
+    task.map(|mut task| {
+        task.subtasks = get_subtasks(conn, &task.id).unwrap_or_default();
+        task
+    })
+    .map_or(Ok(None), |task| Ok(Some(task)))
+}
+
+fn task_from_row(row: &Row<'_>) -> rusqlite::Result<Task> {
+    Ok(Task {
+        id: row.get(0)?,
+        title: row.get(1)?,
+        description: row.get(2)?,
+        status: row.get(3)?,
+        priority: row.get(4)?,
+        progress: row.get(5)?,
+        category: row.get(6)?,
+        tags: vec![],
+        subtasks: vec![],
+        due_date: row.get(7)?,
+        created_at: row.get(8)?,
+        updated_at: row.get(9)?,
+        completed_at: row.get(10)?,
+    })
 }
 
 fn get_subtasks(conn: &rusqlite::Connection, task_id: &str) -> Result<Vec<Subtask>, String> {
     let mut stmt = conn.prepare("SELECT id, title, is_done, sort_order FROM subtasks WHERE task_id=?1 ORDER BY sort_order")
         .map_err(|e| e.to_string())?;
-    let rows = stmt.query_map(params![task_id], |row| {
-        Ok(Subtask {
-            id: row.get(0)?,
-            title: row.get(1)?,
-            is_done: row.get::<_, i32>(2)? != 0,
-            sort_order: row.get(3)?,
+    let rows = stmt
+        .query_map(params![task_id], |row| {
+            Ok(Subtask {
+                id: row.get(0)?,
+                title: row.get(1)?,
+                is_done: row.get::<_, i32>(2)? != 0,
+                sort_order: row.get(3)?,
+            })
         })
-    }).map_err(|e| e.to_string())?;
-    rows.collect::<Result<Vec<_>, _>>().map_err(|e| e.to_string())
+        .map_err(|e| e.to_string())?;
+    rows.collect::<Result<Vec<_>, _>>()
+        .map_err(|e| e.to_string())
 }
 
 #[cfg(test)]
@@ -279,10 +359,13 @@ mod tests {
         insert_task(&conn, &t2);
 
         // filter by status
-        let mut sql = "SELECT id FROM tasks WHERE 1=1 AND status=?1".to_string();
+        let sql = "SELECT id FROM tasks WHERE 1=1 AND status=?1".to_string();
         let mut stmt = conn.prepare(&sql).unwrap();
-        let ids: Vec<String> = stmt.query_map(params!["done"], |row| row.get(0)).unwrap()
-            .filter_map(|r| r.ok()).collect();
+        let ids: Vec<String> = stmt
+            .query_map(params!["done"], |row| row.get(0))
+            .unwrap()
+            .filter_map(|r| r.ok())
+            .collect();
         assert_eq!(ids, vec!["t2"]);
     }
 
@@ -314,7 +397,11 @@ mod tests {
         assert!(subs[0].is_done);
 
         // delete subtask
-        conn.execute("DELETE FROM subtasks WHERE id=?1 AND task_id=?2", params!["s1", "t1"]).unwrap();
+        conn.execute(
+            "DELETE FROM subtasks WHERE id=?1 AND task_id=?2",
+            params!["s1", "t1"],
+        )
+        .unwrap();
         let subs = get_subtasks(&conn, "t1").unwrap();
         assert!(subs.is_empty());
     }
@@ -333,7 +420,8 @@ mod tests {
             params!["s1", "t1", "Child", 0, 0],
         ).unwrap();
 
-        conn.execute("DELETE FROM tasks WHERE id=?1", params!["t1"]).unwrap();
+        conn.execute("DELETE FROM tasks WHERE id=?1", params!["t1"])
+            .unwrap();
         let subs = get_subtasks(&conn, "t1").unwrap();
         assert!(subs.is_empty());
     }
@@ -345,8 +433,11 @@ mod tests {
         let task = sample_task("t1", "Original");
         insert_task(&conn, &task);
 
-        conn.execute("UPDATE tasks SET title=?1, updated_at=?2 WHERE id=?3",
-            params!["Updated Title", "2025-01-02T00:00:00Z", "t1"]).unwrap();
+        conn.execute(
+            "UPDATE tasks SET title=?1, updated_at=?2 WHERE id=?3",
+            params!["Updated Title", "2025-01-02T00:00:00Z", "t1"],
+        )
+        .unwrap();
 
         let fetched = get_task_internal(&conn, "t1").unwrap();
         assert_eq!(fetched.title, "Updated Title");
@@ -362,9 +453,14 @@ mod tests {
         insert_task(&conn, &sample_task("t2", "Read book"));
         insert_task(&conn, &sample_task("t3", "Buy eggs"));
 
-        let mut stmt = conn.prepare("SELECT id FROM tasks WHERE title LIKE ?1").unwrap();
-        let ids: Vec<String> = stmt.query_map(params!["%Buy%"], |row| row.get(0)).unwrap()
-            .filter_map(|r| r.ok()).collect();
+        let mut stmt = conn
+            .prepare("SELECT id FROM tasks WHERE title LIKE ?1")
+            .unwrap();
+        let ids: Vec<String> = stmt
+            .query_map(params!["%Buy%"], |row| row.get(0))
+            .unwrap()
+            .filter_map(|r| r.ok())
+            .collect();
         assert_eq!(ids.len(), 2);
     }
 }

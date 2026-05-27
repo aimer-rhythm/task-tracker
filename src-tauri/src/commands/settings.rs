@@ -1,8 +1,8 @@
-use std::sync::Arc;
-use tauri::State;
 use crate::db::Database;
 use rusqlite::params;
 use std::collections::HashMap;
+use std::sync::Arc;
+use tauri::State;
 
 #[tauri::command]
 pub fn set_setting(db: State<Arc<Database>>, key: String, value: String) -> Result<(), String> {
@@ -10,18 +10,22 @@ pub fn set_setting(db: State<Arc<Database>>, key: String, value: String) -> Resu
     conn.execute(
         "INSERT OR REPLACE INTO app_settings (key, value) VALUES (?1, ?2)",
         params![key, value],
-    ).map_err(|e| e.to_string())?;
+    )
+    .map_err(|e| e.to_string())?;
     Ok(())
 }
 
 #[tauri::command]
 pub fn get_all_settings(db: State<Arc<Database>>) -> Result<HashMap<String, String>, String> {
     let conn = db.conn.lock().map_err(|e| e.to_string())?;
-    let mut stmt = conn.prepare("SELECT key, value FROM app_settings")
+    let mut stmt = conn
+        .prepare("SELECT key, value FROM app_settings")
         .map_err(|e| e.to_string())?;
-    let rows = stmt.query_map([], |row| {
-        Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?))
-    }).map_err(|e| e.to_string())?;
+    let rows = stmt
+        .query_map([], |row| {
+            Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?))
+        })
+        .map_err(|e| e.to_string())?;
     let mut map = HashMap::new();
     for row in rows {
         let (k, v) = row.map_err(|e| e.to_string())?;
@@ -45,13 +49,21 @@ fn get_hwnd(window: &tauri::Window) -> Result<*mut std::ffi::c_void, String> {
 }
 
 #[tauri::command]
-pub fn set_always_on_top(window: tauri::Window, enabled: bool, current_opacity: Option<f64>) -> Result<(), String> {
+pub fn set_always_on_top(
+    window: tauri::Window,
+    enabled: bool,
+    current_opacity: Option<f64>,
+) -> Result<(), String> {
     #[cfg(windows)]
     {
         use windows_sys::Win32::UI::WindowsAndMessaging::*;
 
         let hwnd = get_hwnd(&window)?;
-        let insert_after = if enabled { HWND_TOPMOST } else { HWND_NOTOPMOST };
+        let insert_after = if enabled {
+            HWND_TOPMOST
+        } else {
+            HWND_NOTOPMOST
+        };
 
         unsafe {
             // First ensure WS_EX_LAYERED is set BEFORE SetWindowPos
@@ -62,7 +74,10 @@ pub fn set_always_on_top(window: tauri::Window, enabled: bool, current_opacity: 
             SetWindowPos(
                 hwnd,
                 insert_after,
-                0, 0, 0, 0,
+                0,
+                0,
+                0,
+                0,
                 SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE,
             );
 
@@ -80,7 +95,9 @@ pub fn set_always_on_top(window: tauri::Window, enabled: bool, current_opacity: 
 
     #[cfg(not(windows))]
     {
-        window.set_always_on_top(enabled).map_err(|e| e.to_string())?;
+        window
+            .set_always_on_top(enabled)
+            .map_err(|e| e.to_string())?;
         let _ = current_opacity;
     }
 
@@ -123,13 +140,25 @@ mod tests {
         let db = setup_db();
         let conn = db.conn.lock().unwrap();
 
-        conn.execute("INSERT OR REPLACE INTO app_settings (key, value) VALUES (?1, ?2)", params!["theme", "dark"]).unwrap();
-        conn.execute("INSERT OR REPLACE INTO app_settings (key, value) VALUES (?1, ?2)", params!["opacity", "80"]).unwrap();
+        conn.execute(
+            "INSERT OR REPLACE INTO app_settings (key, value) VALUES (?1, ?2)",
+            params!["theme", "dark"],
+        )
+        .unwrap();
+        conn.execute(
+            "INSERT OR REPLACE INTO app_settings (key, value) VALUES (?1, ?2)",
+            params!["opacity", "80"],
+        )
+        .unwrap();
 
         let mut stmt = conn.prepare("SELECT key, value FROM app_settings").unwrap();
-        let rows: Vec<(String, String)> = stmt.query_map([], |row| {
-            Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?))
-        }).unwrap().filter_map(|r| r.ok()).collect();
+        let rows: Vec<(String, String)> = stmt
+            .query_map([], |row| {
+                Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?))
+            })
+            .unwrap()
+            .filter_map(|r| r.ok())
+            .collect();
 
         assert_eq!(rows.len(), 2);
         assert!(rows.contains(&("theme".to_string(), "dark".to_string())));
@@ -141,10 +170,24 @@ mod tests {
         let db = setup_db();
         let conn = db.conn.lock().unwrap();
 
-        conn.execute("INSERT OR REPLACE INTO app_settings (key, value) VALUES (?1, ?2)", params!["theme", "light"]).unwrap();
-        conn.execute("INSERT OR REPLACE INTO app_settings (key, value) VALUES (?1, ?2)", params!["theme", "dark"]).unwrap();
+        conn.execute(
+            "INSERT OR REPLACE INTO app_settings (key, value) VALUES (?1, ?2)",
+            params!["theme", "light"],
+        )
+        .unwrap();
+        conn.execute(
+            "INSERT OR REPLACE INTO app_settings (key, value) VALUES (?1, ?2)",
+            params!["theme", "dark"],
+        )
+        .unwrap();
 
-        let val: String = conn.query_row("SELECT value FROM app_settings WHERE key=?1", params!["theme"], |row| row.get(0)).unwrap();
+        let val: String = conn
+            .query_row(
+                "SELECT value FROM app_settings WHERE key=?1",
+                params!["theme"],
+                |row| row.get(0),
+            )
+            .unwrap();
         assert_eq!(val, "dark");
     }
 }

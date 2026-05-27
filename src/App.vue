@@ -73,7 +73,7 @@
 import { ref, onMounted, onUnmounted } from "vue";
 import { invoke } from "@tauri-apps/api/core";
 import { getCurrentWindow } from "@tauri-apps/api/window";
-import TaskList from "./views/TaskList.vue";
+import TaskList from "./views/task-list/index.vue";
 import ReminderList from "./views/ReminderList.vue";
 import { useSettingsStore } from "./stores/settings";
 

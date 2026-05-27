@@ -2,6 +2,12 @@ import { defineStore } from "pinia";
 import { ref } from "vue";
 import { invoke } from "@tauri-apps/api/core";
 
+function invokeSilently(command: string, args?: Record<string, unknown>) {
+  return invoke(command, args).catch((error) => {
+    console.warn(`[settings] ${command} failed`, error);
+  });
+}
+
 export const useSettingsStore = defineStore("settings", () => {
   const theme = ref<"light" | "dark">("light");
   const opacity = ref(100);
@@ -9,33 +15,33 @@ export const useSettingsStore = defineStore("settings", () => {
 
   function setTheme(t: "light" | "dark") {
     theme.value = t;
-    invoke("set_setting", { key: "theme", value: t }).catch(() => {});
+    invokeSilently("set_setting", { key: "theme", value: t });
     reapplyOpacity();
   }
 
   function setOpacity(val: number) {
     opacity.value = val;
-    invoke("set_window_opacity", { opacity: val / 100 }).catch(() => {});
-    invoke("set_setting", { key: "opacity", value: String(val) }).catch(() => {});
+    invokeSilently("set_window_opacity", { opacity: val / 100 });
+    invokeSilently("set_setting", { key: "opacity", value: String(val) });
   }
 
   function reapplyOpacity() {
     if (opacity.value < 100) {
-      invoke("set_window_opacity", { opacity: opacity.value / 100 }).catch(() => {});
+      invokeSilently("set_window_opacity", { opacity: opacity.value / 100 });
     }
   }
 
   function toggleAlwaysOnTop() {
     alwaysOnTop.value = !alwaysOnTop.value;
-    invoke("set_always_on_top", {
+    invokeSilently("set_always_on_top", {
       enabled: alwaysOnTop.value,
       currentOpacity: opacity.value / 100,
-    }).catch(() => {});
-    invoke("set_setting", { key: "always_on_top", value: String(alwaysOnTop.value) }).catch(() => {});
+    });
+    invokeSilently("set_setting", { key: "always_on_top", value: String(alwaysOnTop.value) });
   }
 
   function minimizeToTray() {
-    invoke("minimize_to_tray").catch(() => {});
+    invokeSilently("minimize_to_tray");
   }
 
   async function loadSettings() {
@@ -46,13 +52,13 @@ export const useSettingsStore = defineStore("settings", () => {
       if (saved.always_on_top) alwaysOnTop.value = saved.always_on_top === "true";
 
       if (opacity.value < 100) {
-        invoke("set_window_opacity", { opacity: opacity.value / 100 }).catch(() => {});
+        invokeSilently("set_window_opacity", { opacity: opacity.value / 100 });
       }
       if (alwaysOnTop.value) {
-        invoke("set_always_on_top", {
+        invokeSilently("set_always_on_top", {
           enabled: true,
           currentOpacity: opacity.value / 100,
-        }).catch(() => {});
+        });
       }
     } catch {
       // defaults are fine

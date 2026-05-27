@@ -80,7 +80,6 @@ export interface TaskRepository {
 
 export interface ReminderRepository {
   create(input: CreateReminderInput): Promise<Reminder>;
-  update(id: string, data: Partial<Reminder>): Promise<Reminder>;
   delete(id: string): Promise<void>;
   listActive(): Promise<Reminder[]>;
   listAll(): Promise<Reminder[]>;

@@ -33,10 +33,6 @@ export class LocalReminderRepository implements ReminderRepository {
     return reminder;
   }
 
-  async update(id: string, data: Partial<Reminder>): Promise<Reminder> {
-    return await invoke<Reminder>("update_reminder", { id, data });
-  }
-
   async delete(id: string): Promise<void> {
     await invoke("delete_reminder", { id });
   }
