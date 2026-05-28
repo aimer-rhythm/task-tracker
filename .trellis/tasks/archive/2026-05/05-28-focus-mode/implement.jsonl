@@ -1,0 +1,6 @@
+{"_example": "Fill with {\"file\": \"<path>\", \"reason\": \"<why>\"}. Put spec/research files only — no code paths. Run `python .trellis/scripts/get_context.py --mode packages` to list available specs. Delete this line once real entries are added."}
+{"file": ".trellis/spec/frontend/index.md", "reason": "Frontend entry checklist for Vue changes"}
+{"file": ".trellis/spec/frontend/component-guidelines.md", "reason": "Vue component conventions for App and TaskList"}
+{"file": ".trellis/spec/frontend/state-management.md", "reason": "Pinia state guidance for session-only UI state"}
+{"file": ".trellis/spec/frontend/type-safety.md", "reason": "TypeScript props and emits guidance"}
+{"file": ".trellis/spec/guides/index.md", "reason": "Shared thinking guide index"}

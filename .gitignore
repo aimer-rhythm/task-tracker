@@ -33,6 +33,5 @@ npm-debug.log*
 .agents/
 .codex/
 .cursor/
-.trellis/
 AGENTS.md
 smart-search-*.json
