@@ -1,6 +1,7 @@
 <template>
-  <div class="task-list-view">
+  <div class="task-list-view" :class="{ 'focus-task-list-view': focusMode }">
     <QuickTaskEntry
+      v-if="!focusMode"
       :title="newTaskTitle"
       :priority="newTaskPriority"
       :priority-menu-open="activePriorityMenu === 'new'"
@@ -10,9 +11,16 @@
       @select-priority="selectPriority('new', $event)"
     />
 
+    <div v-if="focusMode" class="focus-toolbar">
+      <span class="focus-title">专注模式</span>
+      <button class="btn-icon" title="退出专注模式" @click="emit('exitFocus')">
+        <span class="material-symbols-outlined">close_fullscreen</span>
+      </button>
+    </div>
+
     <div class="task-list">
       <TaskItem
-        v-for="task in taskStore.tasks"
+        v-for="task in visibleTasks"
         :key="task.id"
         :task="task"
         :expanded="taskStore.expandedId === task.id"
@@ -25,9 +33,18 @@
         @toggle-subtask="taskStore.toggleSubtask"
         @add-subtask="taskStore.addSubtask"
       />
+
+      <div v-if="focusMode && visibleTasks.length === 0" class="focus-empty-state">
+        <span class="material-symbols-outlined">check_circle</span>
+        <p>没有待专注的任务</p>
+        <button class="focus-exit-button" @click="emit('exitFocus')">
+          退出专注模式
+        </button>
+      </div>
     </div>
 
     <TaskFooterStats
+      v-if="!focusMode"
       :total-count="taskStore.tasks.length"
       :active-count="taskStore.activeTasks.length"
       :completed-count="taskStore.completedTasks.length"
@@ -37,7 +54,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from "vue";
+import { computed, ref, onMounted, onUnmounted } from "vue";
 import { useTaskStore } from "../../stores/task";
 import type { Priority } from "../../repositories/types";
 import QuickTaskEntry from "./QuickTaskEntry.vue";
@@ -45,9 +62,16 @@ import TaskFooterStats from "./TaskFooterStats.vue";
 import TaskItem from "./TaskItem.vue";
 
 const taskStore = useTaskStore();
+const props = withDefaults(defineProps<{ focusMode?: boolean }>(), {
+  focusMode: false,
+});
+const emit = defineEmits<{
+  (event: "exitFocus"): void;
+}>();
 const newTaskTitle = ref("");
 const newTaskPriority = ref<Priority>("low");
 const activePriorityMenu = ref<string | null>(null);
+const visibleTasks = computed(() => (props.focusMode ? taskStore.activeTasks : taskStore.tasks));
 
 onMounted(() => {
   taskStore.fetchTasks();

@@ -1,12 +1,15 @@
 <template>
-  <div id="app-shell" :class="theme">
-    <header class="titlebar">
+  <div id="app-shell" :class="[theme, { 'focus-mode': focusMode }]">
+    <header v-if="!focusMode" class="titlebar">
       <div class="titlebar-left">
         <span class="app-title">TaskTrack</span>
       </div>
       <div class="titlebar-controls">
         <button class="btn-icon" title="最小化" @click="minimizeWindow">
           <span class="material-symbols-outlined">remove</span>
+        </button>
+        <button class="btn-icon" title="专注模式" @click="enterFocusMode">
+          <span class="material-symbols-outlined">center_focus_strong</span>
         </button>
         <div class="settings-wrapper">
           <button class="btn-icon" title="设置" @click="toggleSettings">
@@ -46,7 +49,7 @@
         </button>
       </div>
     </header>
-    <nav class="tab-bar">
+    <nav v-if="!focusMode" class="tab-bar">
       <button
         :class="['tab', { active: activeTab === 'tasks' }]"
         @click="activeTab = 'tasks'"
@@ -63,7 +66,11 @@
       </button>
     </nav>
     <main class="content">
-      <TaskList v-if="activeTab === 'tasks'" />
+      <TaskList
+        v-if="activeTab === 'tasks' || focusMode"
+        :focus-mode="focusMode"
+        @exit-focus="exitFocusMode"
+      />
       <ReminderList v-else />
     </main>
   </div>
@@ -82,9 +89,26 @@ const activeTab = ref<"tasks" | "reminders">("tasks");
 const theme = ref(settingsStore.theme);
 const opacity = ref(settingsStore.opacity);
 const showSettings = ref(false);
+const focusMode = ref(false);
 
 function toggleSettings() {
   showSettings.value = !showSettings.value;
+}
+
+function enterFocusMode() {
+  activeTab.value = "tasks";
+  showSettings.value = false;
+  focusMode.value = true;
+}
+
+function exitFocusMode() {
+  focusMode.value = false;
+}
+
+function handleKeydown(e: KeyboardEvent) {
+  if (e.key === "Escape" && focusMode.value) {
+    exitFocusMode();
+  }
 }
 
 function closeSettingsOnOutsideClick(e: MouseEvent) {
@@ -121,6 +145,7 @@ async function setupWindowListeners() {
 
 onMounted(async () => {
   document.addEventListener('click', closeSettingsOnOutsideClick);
+  document.addEventListener("keydown", handleKeydown);
   await settingsStore.loadSettings();
   theme.value = settingsStore.theme;
   opacity.value = settingsStore.opacity;
@@ -129,6 +154,7 @@ onMounted(async () => {
 
 onUnmounted(() => {
   document.removeEventListener('click', closeSettingsOnOutsideClick);
+  document.removeEventListener("keydown", handleKeydown);
   unlisteners.forEach((fn) => fn());
 });
 

@@ -3,7 +3,8 @@ import { ref } from "vue";
 import { invoke } from "@tauri-apps/api/core";
 
 function invokeSilently(command: string, args?: Record<string, unknown>) {
-  return invoke(command, args).catch((error) => {
+  const request = args === undefined ? invoke(command) : invoke(command, args);
+  return request.catch((error) => {
     console.warn(`[settings] ${command} failed`, error);
   });
 }
